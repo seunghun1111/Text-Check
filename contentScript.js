@@ -41,6 +41,20 @@ function rememberContextMenuPosition(event) {
     x: event.clientX,
     y: event.clientY
   };
+  globalThis.__koreanTextCheckLastContextMenuPosition = lastContextMenuPosition;
+  rememberSelectedText();
+}
+
+function rememberRightClickPosition(event) {
+  if (event.button !== 2) {
+    return;
+  }
+
+  lastContextMenuPosition = {
+    x: event.clientX,
+    y: event.clientY
+  };
+  globalThis.__koreanTextCheckLastContextMenuPosition = lastContextMenuPosition;
   rememberSelectedText();
 }
 
@@ -384,23 +398,27 @@ function closeOverlay() {
 }
 
 function positionLayerNearContextMenu(layer) {
-  if (!lastContextMenuPosition) {
+  const position =
+    lastContextMenuPosition ||
+    globalThis.__koreanTextCheckLastContextMenuPosition;
+
+  if (!position) {
     return;
   }
 
   const margin = 12;
   const gap = 8;
   layer.style.right = "auto";
-  layer.style.left = `${lastContextMenuPosition.x + gap}px`;
-  layer.style.top = `${lastContextMenuPosition.y + gap}px`;
+  layer.style.left = `${position.x + gap}px`;
+  layer.style.top = `${position.y + gap}px`;
 
   const rect = layer.getBoundingClientRect();
   const left = Math.min(
-    Math.max(lastContextMenuPosition.x + gap, margin),
+    Math.max(position.x + gap, margin),
     Math.max(window.innerWidth - rect.width - margin, margin)
   );
   const top = Math.min(
-    Math.max(lastContextMenuPosition.y + gap, margin),
+    Math.max(position.y + gap, margin),
     Math.max(window.innerHeight - rect.height - margin, margin)
   );
 
@@ -501,7 +519,11 @@ function showCheckOverlay(result) {
 document.addEventListener("selectionchange", rememberSelectedText);
 document.addEventListener("mouseup", rememberSelectedText);
 document.addEventListener("keyup", rememberSelectedText);
-document.addEventListener("contextmenu", rememberContextMenuPosition);
+window.addEventListener("pointerdown", rememberRightClickPosition, true);
+window.addEventListener("mousedown", rememberRightClickPosition, true);
+window.addEventListener("contextmenu", rememberContextMenuPosition, true);
+document.addEventListener("mousedown", rememberRightClickPosition, true);
+document.addEventListener("contextmenu", rememberContextMenuPosition, true);
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "GET_SELECTED_TEXT") {

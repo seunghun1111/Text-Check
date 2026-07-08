@@ -18,10 +18,29 @@ function getStorageArea() {
 
 async function getLocalSettings() {
   try {
-    const localConfig = await import("./apiKeys.local.js");
+    if (!globalThis.chrome?.runtime?.getURL) {
+      return {
+        apiSettings: {},
+        checkerOptions: {}
+      };
+    }
+
+    const response = await fetch(
+      chrome.runtime.getURL("modules/apiKeys.local.json"),
+      { cache: "no-store" }
+    );
+
+    if (!response.ok) {
+      return {
+        apiSettings: {},
+        checkerOptions: {}
+      };
+    }
+
+    const localConfig = await response.json();
     return {
-      apiSettings: localConfig.LOCAL_API_SETTINGS ?? {},
-      checkerOptions: localConfig.LOCAL_CHECKER_OPTIONS ?? {}
+      apiSettings: localConfig.apiSettings ?? {},
+      checkerOptions: localConfig.checkerOptions ?? {}
     };
   } catch (_error) {
     return {
