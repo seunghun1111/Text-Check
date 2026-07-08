@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check background.js && node --check contentScript.js && node --check popup/popup.js && node --check modules/ruleChecker.js && node --check modules/patternEngine.js && node --check modules/defaultRules.js && node --check modules/businessPatterns.js && node --check modules/domainTerms.js && node --check modules/storage.js && node --check modules/dictionaryApi.js && node --check modules/spacingChecker.js && node --check modules/styleRewriter.js"
+    "check": "node --check background.js && node --check contentScript.js && node --check popup/popup.js && node --check modules/ruleChecker.js && node --check modules/morphAnalyzer.js && node --check modules/patternEngine.js && node --check modules/defaultRules.js && node --check modules/businessPatterns.js && node --check modules/domainTerms.js && node --check modules/storage.js && node --check modules/dictionaryApi.js && node --check modules/spacingChecker.js && node --check modules/styleRewriter.js"
   }
 }

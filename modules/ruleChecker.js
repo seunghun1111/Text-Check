@@ -1,8 +1,10 @@
 import { DEFAULT_RULES } from "./defaultRules.js";
+import { buildMorphologySpacingRules } from "./morphAnalyzer.js";
 import {
   applyMatches,
   buildBusinessRules,
   collectRuleMatches,
+  getDomainTerms,
   getNonOverlappingMatches
 } from "./patternEngine.js";
 
@@ -33,10 +35,15 @@ function collectUnconfirmedWords(text, exceptionWords) {
 
 export function checkText(text, options = {}) {
   const exceptionWords = normalizeExceptionWords(options.exceptionWords);
+  const domainTerms = getDomainTerms(options.userDomainTerms);
   const businessRules = buildBusinessRules(options.userDomainTerms);
+  const morphologyRules = buildMorphologySpacingRules(text, {
+    domainTerms
+  });
   const rules = [
     ...(options.rules ?? DEFAULT_RULES),
     ...businessRules,
+    ...morphologyRules,
     ...(options.customRules ?? [])
   ];
   const matches = rules.flatMap((rule) =>
