@@ -23,6 +23,22 @@ API 조회 결과가 없더라도 해당 단어를 오류로 판단하지 않습
 
 "조회 사용"을 켠 뒤 "API 설정 저장"을 누르면 키가 Chrome storage에 저장됩니다. API 키가 없거나 조회가 실패해도 로컬 규칙 기반 맞춤법·띄어쓰기 검사는 계속 동작합니다.
 
+개발 중에는 매번 팝업에서 키를 입력하지 않도록 로컬 전용 파일을 사용할 수 있습니다.
+
+```js
+// modules/apiKeys.local.js
+export const LOCAL_API_SETTINGS = {
+  krdictApiKey: "한국어기초사전_API_키",
+  opendictApiKey: "우리말샘_API_키"
+};
+
+export const LOCAL_CHECKER_OPTIONS = {
+  enableDictionaryApi: true
+};
+```
+
+`modules/apiKeys.local.js`는 `.gitignore`에 포함되어 원격 저장소에 올라가지 않습니다. 저장소에는 참고용 [modules/apiKeys.local.example.js](/Users/han.woo/Desktop/study/Text-Check/modules/apiKeys.local.example.js)만 커밋합니다.
+
 주의: 크롬 확장에 저장된 키는 완전한 비밀값으로 보장하기 어렵습니다. 현재 구조는 내부 사용자 또는 제한된 배포 환경을 전제로 합니다.
 
 ## MVP 기능
@@ -53,6 +69,7 @@ package.json
 background.js
 contentScript.js
 modules/
+  apiKeys.local.example.js
   defaultRules.js
   dictionaryApi.js
   ruleChecker.js

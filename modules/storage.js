@@ -16,17 +16,36 @@ function getStorageArea() {
   return chrome.storage.sync;
 }
 
+async function getLocalSettings() {
+  try {
+    const localConfig = await import("./apiKeys.local.js");
+    return {
+      apiSettings: localConfig.LOCAL_API_SETTINGS ?? {},
+      checkerOptions: localConfig.LOCAL_CHECKER_OPTIONS ?? {}
+    };
+  } catch (_error) {
+    return {
+      apiSettings: {},
+      checkerOptions: {}
+    };
+  }
+}
+
 export async function getSettings() {
   const settings = await getStorageArea().get(DEFAULTS);
+  const localSettings = await getLocalSettings();
+
   return {
     ...settings,
     apiSettings: {
       ...DEFAULTS.apiSettings,
-      ...(settings.apiSettings ?? {})
+      ...(settings.apiSettings ?? {}),
+      ...localSettings.apiSettings
     },
     checkerOptions: {
       ...DEFAULTS.checkerOptions,
-      ...(settings.checkerOptions ?? {})
+      ...(settings.checkerOptions ?? {}),
+      ...localSettings.checkerOptions
     }
   };
 }
