@@ -45,35 +45,6 @@ async function fetchDictionaryJson(url, params) {
   return xmlToSearchResult(body);
 }
 
-function normalizeProxyEndpoint(endpoint) {
-  return String(endpoint ?? "").trim().replace(/\/$/, "");
-}
-
-async function lookupProxyDictionary(word, endpoint) {
-  const proxyEndpoint = normalizeProxyEndpoint(endpoint);
-  if (!proxyEndpoint) {
-    return {
-      word,
-      status: "skipped",
-      reason: "사전 프록시 URL이 설정되지 않았습니다."
-    };
-  }
-
-  const response = await fetch(`${proxyEndpoint}/dictionary/search`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json"
-    },
-    body: JSON.stringify({ word })
-  });
-
-  if (!response.ok) {
-    throw new Error(`Dictionary proxy request failed: ${response.status}`);
-  }
-
-  return response.json();
-}
-
 function getXmlTagValue(xml, tagName) {
   const match = xml.match(new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)</${tagName}>`));
   return match ? decodeXmlValue(match[1]).trim() : "";
@@ -207,10 +178,6 @@ export async function lookupDictionary(word, settings = {}) {
   const apiSettings = settings.apiSettings ?? {};
 
   try {
-    if (apiSettings.proxyEndpoint) {
-      return lookupProxyDictionary(word, apiSettings.proxyEndpoint);
-    }
-
     const krdictResult = await lookupKoreanBasicDictionary(
       word,
       apiSettings.krdictApiKey

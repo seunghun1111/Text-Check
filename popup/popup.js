@@ -14,7 +14,6 @@ const exceptionInput = document.querySelector("#exceptionInput");
 const addExceptionButton = document.querySelector("#addExceptionButton");
 const exceptionList = document.querySelector("#exceptionList");
 const enableDictionaryApi = document.querySelector("#enableDictionaryApi");
-const proxyEndpoint = document.querySelector("#proxyEndpoint");
 const krdictApiKey = document.querySelector("#krdictApiKey");
 const opendictApiKey = document.querySelector("#opendictApiKey");
 const saveApiSettingsButton = document.querySelector("#saveApiSettingsButton");
@@ -174,7 +173,6 @@ function renderResults(result) {
 
 function renderApiSettings() {
   enableDictionaryApi.checked = Boolean(settings.checkerOptions.enableDictionaryApi);
-  proxyEndpoint.value = settings.apiSettings.proxyEndpoint ?? "";
   krdictApiKey.value = settings.apiSettings.krdictApiKey ?? "";
   opendictApiKey.value = settings.apiSettings.opendictApiKey ?? "";
 }
@@ -249,7 +247,6 @@ async function handleAddExceptionWord() {
 
 async function handleSaveApiSettings() {
   const apiSettings = {
-    proxyEndpoint: proxyEndpoint.value.trim(),
     krdictApiKey: krdictApiKey.value.trim(),
     opendictApiKey: opendictApiKey.value.trim()
   };
@@ -261,7 +258,7 @@ async function handleSaveApiSettings() {
   settings = await saveCheckerOptions(checkerOptions);
   apiSettingsStatus.textContent = "API 설정을 저장했습니다.";
   window.setTimeout(() => {
-    apiSettingsStatus.textContent = "키는 Chrome storage에만 저장됩니다.";
+    apiSettingsStatus.textContent = "내부용 키는 Chrome storage에 저장됩니다.";
   }, 1400);
 }
 

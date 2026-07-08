@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check background.js && node --check contentScript.js && node --check popup/popup.js && node --check modules/ruleChecker.js && node --check modules/storage.js && node --check modules/dictionaryApi.js && node --check modules/spacingChecker.js && node --check modules/styleRewriter.js && node --check backend/proxy-server.js",
-    "proxy": "node backend/proxy-server.js"
+    "check": "node --check background.js && node --check contentScript.js && node --check popup/popup.js && node --check modules/ruleChecker.js && node --check modules/storage.js && node --check modules/dictionaryApi.js && node --check modules/spacingChecker.js && node --check modules/styleRewriter.js"
   }
 }

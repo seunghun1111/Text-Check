@@ -1,5 +1,6 @@
 let lastSelectedText = "";
 let overlayHost = null;
+let lastContextMenuPosition = null;
 
 function getSelectionFromEditableElement(element) {
   if (
@@ -33,6 +34,14 @@ function rememberSelectedText() {
   if (selectedText) {
     lastSelectedText = selectedText;
   }
+}
+
+function rememberContextMenuPosition(event) {
+  lastContextMenuPosition = {
+    x: event.clientX,
+    y: event.clientY
+  };
+  rememberSelectedText();
 }
 
 function createStyle() {
@@ -374,6 +383,31 @@ function closeOverlay() {
   overlayHost = null;
 }
 
+function positionLayerNearContextMenu(layer) {
+  if (!lastContextMenuPosition) {
+    return;
+  }
+
+  const margin = 12;
+  const gap = 8;
+  layer.style.right = "auto";
+  layer.style.left = `${lastContextMenuPosition.x + gap}px`;
+  layer.style.top = `${lastContextMenuPosition.y + gap}px`;
+
+  const rect = layer.getBoundingClientRect();
+  const left = Math.min(
+    Math.max(lastContextMenuPosition.x + gap, margin),
+    Math.max(window.innerWidth - rect.width - margin, margin)
+  );
+  const top = Math.min(
+    Math.max(lastContextMenuPosition.y + gap, margin),
+    Math.max(window.innerHeight - rect.height - margin, margin)
+  );
+
+  layer.style.left = `${left}px`;
+  layer.style.top = `${top}px`;
+}
+
 function showCheckOverlay(result) {
   closeOverlay();
 
@@ -461,11 +495,13 @@ function showCheckOverlay(result) {
   layer.append(header, body);
   shadow.append(layer);
   document.documentElement.append(overlayHost);
+  positionLayerNearContextMenu(layer);
 }
 
 document.addEventListener("selectionchange", rememberSelectedText);
 document.addEventListener("mouseup", rememberSelectedText);
 document.addEventListener("keyup", rememberSelectedText);
+document.addEventListener("contextmenu", rememberContextMenuPosition);
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "GET_SELECTED_TEXT") {

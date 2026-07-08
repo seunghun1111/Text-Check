@@ -28,6 +28,13 @@ export const DEFAULT_RULES = [
     description: "보조사/부사성 표현 띄어쓰기"
   },
   {
+    id: "spelling-annyeonghaseyo",
+    category: "spelling",
+    wrong: "안넝하세요",
+    suggestion: "안녕하세요",
+    description: "인사말 오타"
+  },
+  {
     id: "spelling-budakgeyo",
     category: "spelling",
     wrong: "부탁드릴께요",

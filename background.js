@@ -81,7 +81,6 @@ chrome.runtime.onInstalled.addListener(() => {
 
     if (!items.apiSettings) {
       defaults.apiSettings = {
-        proxyEndpoint: "",
         krdictApiKey: "",
         opendictApiKey: ""
       };

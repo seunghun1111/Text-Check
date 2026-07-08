@@ -45,19 +45,14 @@
             <span>조회 사용</span>
           </label>
         </div>
-        <label class="label" for="proxyEndpoint">내부 사전 프록시 URL</label>
-        <input id="proxyEndpoint" type="url" autocomplete="off" placeholder="예: https://text-check-api.internal">
-        <details class="advanced-settings">
-          <summary>개발용 직접 API 키 입력</summary>
-          <label class="label stacked" for="krdictApiKey">한국어기초사전 API 키</label>
-          <input id="krdictApiKey" type="password" autocomplete="off" placeholder="프록시가 없을 때만 입력">
-          <label class="label stacked" for="opendictApiKey">우리말샘 API 키</label>
-          <input id="opendictApiKey" type="password" autocomplete="off" placeholder="프록시가 없을 때만 입력">
-        </details>
+        <label class="label" for="krdictApiKey">한국어기초사전 API 키</label>
+        <input id="krdictApiKey" type="password" autocomplete="off" placeholder="발급받은 키를 입력하세요">
+        <label class="label stacked" for="opendictApiKey">우리말샘 API 키</label>
+        <input id="opendictApiKey" type="password" autocomplete="off" placeholder="발급받은 키를 입력하세요">
         <div class="actions">
           <button id="saveApiSettingsButton" type="button">API 설정 저장</button>
         </div>
-        <p id="apiSettingsStatus" class="status">내부 배포에서는 프록시 URL 사용을 권장합니다.</p>
+        <p id="apiSettingsStatus" class="status">내부용 키는 Chrome storage에 저장됩니다.</p>
       </section>
     </main>
 
