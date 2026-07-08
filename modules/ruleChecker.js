@@ -1,7 +1,7 @@
 import { DEFAULT_RULES } from "./defaultRules.js";
 
 const TECHNICAL_TOKEN_PATTERN =
-  /\b(?:[A-Z]{2,}(?:-[0-9]+)?|[A-Za-z]+[A-Z][A-Za-z0-9]*|[A-Za-z]+[0-9]+[A-Za-z0-9]*|[A-Z]+-[0-9]+|[0-9]+)\b/g;
+  /\b(?:[A-Z]{2,}(?:-[0-9]+)?|[A-Za-z]+[A-Z][A-Za-z0-9]*|[A-Za-z]+[0-9]+[A-Za-z0-9]*|[A-Z]+-[0-9]+)\b/g;
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -41,12 +41,23 @@ function collectMatches(text, rule, exceptionWords) {
     matches.push({
       ...rule,
       original,
+      suggestion: getSuggestion(rule, original, match),
       start: match.index,
       end: match.index + original.length
     });
   }
 
   return matches;
+}
+
+function getSuggestion(rule, original, match) {
+  if (rule.matchType !== "regex" || !rule.replacement) {
+    return rule.suggestion;
+  }
+
+  return rule.replacement.replace(/\$(\d+)/g, (_placeholder, index) => {
+    return match[Number(index)] ?? "";
+  });
 }
 
 function collectUnconfirmedWords(text, exceptionWords) {
