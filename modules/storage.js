@@ -2,6 +2,7 @@ const DEFAULTS = {
   exceptionWords: [],
   customRules: [],
   apiSettings: {
+    proxyEndpoint: "",
     krdictApiKey: "",
     opendictApiKey: ""
   },

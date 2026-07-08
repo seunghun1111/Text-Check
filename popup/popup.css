@@ -101,6 +101,16 @@ p {
   min-height: auto;
 }
 
+.advanced-settings {
+  margin-top: 10px;
+  color: var(--muted);
+}
+
+.advanced-settings summary {
+  cursor: pointer;
+  font-size: 12px;
+}
+
 textarea,
 input {
   width: 100%;
