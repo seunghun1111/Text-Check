@@ -2,9 +2,11 @@ import { checkText } from "./modules/ruleChecker.js";
 import {
   addExceptionWord,
   addCustomRule,
+  addUserDomainTerm,
   getSettings,
   removeExceptionWord,
   removeCustomRule,
+  removeUserDomainTerm,
   saveApiSettings,
   saveCheckerOptions
 } from "./modules/storage.js";
@@ -12,6 +14,7 @@ import {
   checkWordsWithDictionary,
   extractKoreanWords
 } from "./modules/dictionaryApi.js";
+import { getDomainTerms } from "./modules/patternEngine.js";
 
 const CHECK_SELECTION_MENU_ID = "check-selected-korean-text";
 
@@ -31,6 +34,7 @@ async function runLocalCheck(text) {
   const result = checkText(text, {
     exceptionWords: settings.exceptionWords,
     customRules: settings.customRules,
+    userDomainTerms: settings.userDomainTerms,
     includeUnconfirmedWords: settings.checkerOptions.includeUnconfirmedWords
   });
 
@@ -46,10 +50,15 @@ async function runLocalCheck(text) {
 async function runDictionaryCheck(text, localResult = null) {
   const settings = await getSettings();
   const result = localResult ?? await runLocalCheck(text);
+  const domainWords = new Set(
+    getDomainTerms(settings.userDomainTerms).flatMap((term) => term.variants)
+  );
   const words = extractKoreanWords(
     text,
     settings.checkerOptions.dictionaryLookupLimit
-  ).filter((word) => !settings.exceptionWords.includes(word));
+  ).filter((word) => {
+    return !settings.exceptionWords.includes(word) && !domainWords.has(word);
+  });
   const dictionaryLookups = await checkWordsWithDictionary(words, settings);
   const dictionaryUnconfirmedWords = settings.checkerOptions.enableDictionaryApi
     ? dictionaryLookups
@@ -114,7 +123,7 @@ async function showCheckLayer(tabId, text) {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.sync.get(["exceptionWords", "customRules", "checkerOptions", "apiSettings"], (items) => {
+  chrome.storage.sync.get(["exceptionWords", "customRules", "userDomainTerms", "checkerOptions", "apiSettings"], (items) => {
     const defaults = {};
 
     if (!Array.isArray(items.exceptionWords)) {
@@ -123,6 +132,10 @@ chrome.runtime.onInstalled.addListener(() => {
 
     if (!Array.isArray(items.customRules)) {
       defaults.customRules = [];
+    }
+
+    if (!Array.isArray(items.userDomainTerms)) {
+      defaults.userDomainTerms = [];
     }
 
     if (!items.apiSettings) {
@@ -200,6 +213,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.type === "REMOVE_CUSTOM_RULE") {
     removeCustomRule(message.ruleId)
+      .then((settings) => sendResponse({ ok: true, settings }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (message?.type === "ADD_USER_DOMAIN_TERM") {
+    addUserDomainTerm(message.term)
+      .then((settings) => sendResponse({ ok: true, settings }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (message?.type === "REMOVE_USER_DOMAIN_TERM") {
+    removeUserDomainTerm(message.termId)
       .then((settings) => sendResponse({ ok: true, settings }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;

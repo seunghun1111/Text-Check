@@ -1,11 +1,13 @@
 import { DEFAULT_RULES } from "./defaultRules.js";
+import {
+  applyMatches,
+  buildBusinessRules,
+  collectRuleMatches,
+  getNonOverlappingMatches
+} from "./patternEngine.js";
 
 const TECHNICAL_TOKEN_PATTERN =
   /\b(?:[A-Z]{2,}(?:-[0-9]+)?|[A-Za-z]+[A-Z][A-Za-z0-9]*|[A-Za-z]+[0-9]+[A-Za-z0-9]*|[A-Z]+-[0-9]+)\b/g;
-
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 function normalizeExceptionWords(words = []) {
   return new Set(
@@ -13,51 +15,6 @@ function normalizeExceptionWords(words = []) {
       .map((word) => String(word).trim())
       .filter(Boolean)
   );
-}
-
-function collectMatches(text, rule, exceptionWords) {
-  if (exceptionWords.has(rule.wrong)) {
-    return [];
-  }
-
-  const source = rule.matchType === "regex"
-    ? rule.pattern
-    : escapeRegExp(rule.wrong);
-  if (!source) {
-    return [];
-  }
-
-  const pattern = new RegExp(source, "g");
-  const matches = [];
-  let match;
-
-  while ((match = pattern.exec(text)) !== null) {
-    const original = match[0];
-    if (!original) {
-      pattern.lastIndex += 1;
-      continue;
-    }
-
-    matches.push({
-      ...rule,
-      original,
-      suggestion: getSuggestion(rule, original, match),
-      start: match.index,
-      end: match.index + original.length
-    });
-  }
-
-  return matches;
-}
-
-function getSuggestion(rule, original, match) {
-  if (rule.matchType !== "regex" || !rule.replacement) {
-    return rule.suggestion;
-  }
-
-  return rule.replacement.replace(/\$(\d+)/g, (_placeholder, index) => {
-    return match[Number(index)] ?? "";
-  });
 }
 
 function collectUnconfirmedWords(text, exceptionWords) {
@@ -74,38 +31,16 @@ function collectUnconfirmedWords(text, exceptionWords) {
   return [...words];
 }
 
-function getNonOverlappingMatches(matches) {
-  const nonOverlappingMatches = [];
-  let lastEnd = -1;
-
-  [...matches]
-    .sort((a, b) => a.start - b.start || b.end - a.end)
-    .forEach((match) => {
-      if (match.start >= lastEnd) {
-        nonOverlappingMatches.push(match);
-        lastEnd = match.end;
-      }
-    });
-
-  return nonOverlappingMatches;
-}
-
-function applyRules(text, matches) {
-  return matches
-    .sort((a, b) => b.start - a.start)
-    .reduce((currentText, match) => {
-      return `${currentText.slice(0, match.start)}${match.suggestion}${currentText.slice(match.end)}`;
-    }, text);
-}
-
 export function checkText(text, options = {}) {
   const exceptionWords = normalizeExceptionWords(options.exceptionWords);
+  const businessRules = buildBusinessRules(options.userDomainTerms);
   const rules = [
     ...(options.rules ?? DEFAULT_RULES),
+    ...businessRules,
     ...(options.customRules ?? [])
   ];
   const matches = rules.flatMap((rule) =>
-    collectMatches(text, rule, exceptionWords)
+    collectRuleMatches(text, rule, exceptionWords)
   );
   const nonOverlappingMatches = getNonOverlappingMatches(matches);
   const spelling = nonOverlappingMatches.filter((item) => item.category === "spelling");
@@ -119,7 +54,7 @@ export function checkText(text, options = {}) {
 
   return {
     originalText: text,
-    correctedText: applyRules(text, nonOverlappingMatches),
+    correctedText: applyMatches(text, nonOverlappingMatches),
     spelling,
     spacing,
     standardNotation,

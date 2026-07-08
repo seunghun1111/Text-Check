@@ -1,9 +1,11 @@
 import {
   addExceptionWord,
   addCustomRule,
+  addUserDomainTerm,
   getSettings,
   removeExceptionWord,
   removeCustomRule,
+  removeUserDomainTerm,
   saveApiSettings,
   saveCheckerOptions
 } from "../modules/storage.js";
@@ -20,6 +22,10 @@ const customWrongInput = document.querySelector("#customWrongInput");
 const customSuggestionInput = document.querySelector("#customSuggestionInput");
 const addCustomRuleButton = document.querySelector("#addCustomRuleButton");
 const customRuleList = document.querySelector("#customRuleList");
+const domainTermInput = document.querySelector("#domainTermInput");
+const domainPreferredInput = document.querySelector("#domainPreferredInput");
+const addDomainTermButton = document.querySelector("#addDomainTermButton");
+const domainTermList = document.querySelector("#domainTermList");
 const enableDictionaryApi = document.querySelector("#enableDictionaryApi");
 const krdictApiKey = document.querySelector("#krdictApiKey");
 const opendictApiKey = document.querySelector("#opendictApiKey");
@@ -234,6 +240,32 @@ function renderCustomRules() {
   });
 }
 
+function renderDomainTerms() {
+  clearElement(domainTermList);
+
+  if (!settings.userDomainTerms.length) {
+    domainTermList.append(createElement("p", "status", "등록된 사용자 업무 용어가 없습니다."));
+    return;
+  }
+
+  settings.userDomainTerms.forEach((term) => {
+    const item = createElement("div", "rule-item");
+    const text = createElement("div", "rule-text");
+    text.append(createElement("strong", "", term.term));
+    text.append(createElement("span", "arrow", "→"));
+    text.append(createElement("strong", "", term.preferred));
+
+    const removeButton = createElement("button", "rule-remove", "×");
+    removeButton.type = "button";
+    removeButton.title = `${term.term} 업무 용어 삭제`;
+    removeButton.setAttribute("aria-label", `${term.term} 업무 용어 삭제`);
+    removeButton.addEventListener("click", () => handleRemoveDomainTerm(term.id));
+
+    item.append(text, removeButton);
+    domainTermList.append(item);
+  });
+}
+
 async function runCheck() {
   const text = sourceText.value.trim();
   if (!text) {
@@ -318,6 +350,29 @@ async function handleRemoveCustomRule(ruleId) {
   runCheck();
 }
 
+async function handleAddDomainTerm() {
+  const term = domainTermInput.value.trim();
+  const preferred = domainPreferredInput.value.trim();
+  if (!term) {
+    return;
+  }
+
+  settings = await addUserDomainTerm({
+    term,
+    preferred
+  });
+  domainTermInput.value = "";
+  domainPreferredInput.value = "";
+  renderDomainTerms();
+  runCheck();
+}
+
+async function handleRemoveDomainTerm(termId) {
+  settings = await removeUserDomainTerm(termId);
+  renderDomainTerms();
+  runCheck();
+}
+
 async function handleSaveApiSettings() {
   const apiSettings = {
     krdictApiKey: krdictApiKey.value.trim(),
@@ -339,6 +394,7 @@ checkButton.addEventListener("click", runCheck);
 copyButton.addEventListener("click", copyCorrectedText);
 addExceptionButton.addEventListener("click", handleAddExceptionWord);
 addCustomRuleButton.addEventListener("click", handleAddCustomRule);
+addDomainTermButton.addEventListener("click", handleAddDomainTerm);
 saveApiSettingsButton.addEventListener("click", handleSaveApiSettings);
 exceptionInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -350,8 +406,14 @@ customSuggestionInput.addEventListener("keydown", (event) => {
     handleAddCustomRule();
   }
 });
+domainPreferredInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    handleAddDomainTerm();
+  }
+});
 
 renderExceptionWords();
 renderCustomRules();
+renderDomainTerms();
 renderApiSettings();
 await loadSelectedText();

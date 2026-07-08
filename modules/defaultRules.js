@@ -112,54 +112,6 @@ export const DEFAULT_RULES = [
     description: "의존 명사 띄어쓰기"
   },
   {
-    id: "spacing-month-day",
-    category: "spacing",
-    matchType: "regex",
-    pattern: "([0-9]{1,2})월\\s*([0-9]{1,2})일",
-    replacement: "$1월 $2일",
-    wrong: "월일 날짜",
-    suggestion: "월 일 날짜",
-    description: "날짜 월/일 띄어쓰기"
-  },
-  {
-    id: "spacing-work-jung",
-    category: "spacing",
-    matchType: "regex",
-    pattern: "([가-힣]+근무)중(으로|입니다|이며|인|에|에는|이라|이고)?",
-    replacement: "$1 중$2",
-    wrong: "근무중",
-    suggestion: "근무 중",
-    description: "의존 명사 '중' 띄어쓰기"
-  },
-  {
-    id: "spacing-family-care-leave",
-    category: "spacing",
-    wrong: "가족돌봄휴가",
-    suggestion: "가족 돌봄 휴가",
-    description: "복합 명사 띄어쓰기"
-  },
-  {
-    id: "spacing-manual-create-request-polite",
-    category: "spacing",
-    wrong: "수동생성요청 드립니다",
-    suggestion: "수동 생성 요청드립니다",
-    description: "업무 표현 띄어쓰기"
-  },
-  {
-    id: "spacing-manual-create-request",
-    category: "spacing",
-    wrong: "수동생성요청",
-    suggestion: "수동 생성 요청",
-    description: "복합 명사 띄어쓰기"
-  },
-  {
-    id: "spacing-request-deurimnida",
-    category: "spacing",
-    wrong: "요청 드립니다",
-    suggestion: "요청드립니다",
-    description: "업무 표현 붙여 쓰기"
-  },
-  {
     id: "spacing-doel-su",
     category: "spacing",
     wrong: "될수",

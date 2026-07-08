@@ -54,6 +54,8 @@ API 조회 결과가 없더라도 해당 단어를 오류로 판단하지 않습
 - 전체 수정 결과 복사
 - 사용자 예외 단어를 Chrome storage에 저장
 - 사용자 교정 규칙을 Chrome storage에 저장
+- 사용자 업무 용어를 Chrome storage에 저장
+- 업무 문장용 패턴 엔진과 도메인 사전 기반 띄어쓰기 제안
 - 한국어기초사전/우리말샘 API 조회 모듈 분리
 
 ## 검사 엔진 방향
@@ -65,6 +67,8 @@ API 조회 결과가 없더라도 해당 단어를 오류로 판단하지 않습
 - 사전에 없는 단어는 오류가 아니라 미확인 단어로 분류합니다.
 - 영어, 숫자, 개발 용어, 이슈 번호는 기본적으로 오류 판정에서 제외합니다.
 - 사용자는 예외 단어와 직접 교정 규칙을 등록할 수 있습니다.
+- 사용자는 업무 용어와 권장 표기를 등록할 수 있습니다.
+- 업무 문장용 패턴 엔진은 도메인 사전을 활용해 `업무용어+중`, `업무요청+드립니다`, 날짜 표기 같은 반복 패턴을 처리합니다.
 - 사전 조회는 설정된 단어 수까지만 수행하며, 같은 단어는 임시 캐시로 중복 조회를 줄입니다.
 
 ## 설치
@@ -84,8 +88,11 @@ background.js
 contentScript.js
 modules/
   apiKeys.local.example.json
+  businessPatterns.js
   defaultRules.js
   dictionaryApi.js
+  domainTerms.js
+  patternEngine.js
   ruleChecker.js
   spacingChecker.js
   storage.js

@@ -55,6 +55,20 @@
 
       <section class="section">
         <div class="section-heading">
+          <h2>사용자 업무 용어</h2>
+        </div>
+        <label class="label" for="domainTermInput">업무 용어</label>
+        <input id="domainTermInput" type="text" placeholder="예: 특별휴가신청">
+        <label class="label stacked" for="domainPreferredInput">권장 표기</label>
+        <input id="domainPreferredInput" type="text" placeholder="예: 특별 휴가 신청">
+        <div class="actions">
+          <button id="addDomainTermButton" type="button">업무 용어 등록</button>
+        </div>
+        <div id="domainTermList" class="rule-list" aria-label="등록된 사용자 업무 용어"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
           <h2>사전 API 설정</h2>
           <label class="switch">
             <input id="enableDictionaryApi" type="checkbox">

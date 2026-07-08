@@ -1,6 +1,7 @@
 const DEFAULTS = {
   exceptionWords: [],
   customRules: [],
+  userDomainTerms: [],
   apiSettings: {
     krdictApiKey: "",
     opendictApiKey: ""
@@ -143,6 +144,27 @@ function normalizeCustomRule(rule) {
   };
 }
 
+function normalizeDomainTerm(term) {
+  const rawTerm = String(term?.term ?? "").trim();
+  const preferred = String(term?.preferred ?? "").trim() || rawTerm;
+  const aliases = Array.isArray(term?.aliases)
+    ? term.aliases.map((item) => String(item).trim()).filter(Boolean)
+    : [];
+
+  if (!rawTerm) {
+    throw new Error("사용자 업무 용어를 입력해야 합니다.");
+  }
+
+  return {
+    id: term.id || `domain-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    term: rawTerm,
+    preferred,
+    category: term.category || "custom",
+    aliases,
+    custom: true
+  };
+}
+
 export async function addCustomRule(rule) {
   const settings = await getSettings();
   const normalizedRule = normalizeCustomRule(rule);
@@ -166,5 +188,31 @@ export async function removeCustomRule(ruleId) {
   return {
     ...settings,
     customRules: nextRules
+  };
+}
+
+export async function addUserDomainTerm(term) {
+  const settings = await getSettings();
+  const normalizedTerm = normalizeDomainTerm(term);
+  const nextTerms = [
+    ...settings.userDomainTerms.filter((item) => item.term !== normalizedTerm.term),
+    normalizedTerm
+  ];
+  await getStorageArea().set({ userDomainTerms: nextTerms });
+
+  return {
+    ...settings,
+    userDomainTerms: nextTerms
+  };
+}
+
+export async function removeUserDomainTerm(termId) {
+  const settings = await getSettings();
+  const nextTerms = settings.userDomainTerms.filter((item) => item.id !== termId);
+  await getStorageArea().set({ userDomainTerms: nextTerms });
+
+  return {
+    ...settings,
+    userDomainTerms: nextTerms
   };
 }
