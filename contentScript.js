@@ -182,6 +182,23 @@ function createStyle() {
       font-size: 12px;
     }
 
+    .ktc-dictionary-entry {
+      padding: 8px;
+      border-radius: 6px;
+      background: var(--ktc-info-bg);
+      color: var(--ktc-text);
+      word-break: break-word;
+    }
+
+    .ktc-dictionary-entry + .ktc-dictionary-entry {
+      margin-top: 6px;
+    }
+
+    .ktc-dictionary-meta {
+      color: var(--ktc-info);
+      font-size: 12px;
+    }
+
     button.ktc-chip {
       cursor: pointer;
     }
@@ -302,6 +319,36 @@ function appendWordGroup(parent, title, words, onAddException) {
   parent.append(section);
 }
 
+function appendDictionaryGroup(parent, lookups = []) {
+  const foundLookups = lookups.filter((item) => item.status === "found");
+  if (!foundLookups.length) {
+    return;
+  }
+
+  const section = document.createElement("section");
+  section.className = "ktc-section";
+  appendTextElement(section, "h3", "ktc-section-title", "사전 확인");
+
+  foundLookups.forEach((lookup) => {
+    const entry = lookup.entries[0] ?? {};
+    const item = document.createElement("div");
+    item.className = "ktc-dictionary-entry";
+    appendTextElement(item, "strong", "", lookup.word);
+    appendTextElement(
+      item,
+      "div",
+      "ktc-dictionary-meta",
+      `${entry.source ?? lookup.source}${entry.partOfSpeech ? ` · ${entry.partOfSpeech}` : ""}`
+    );
+    if (entry.definition) {
+      appendTextElement(item, "div", "", entry.definition);
+    }
+    section.append(item);
+  });
+
+  parent.append(section);
+}
+
 async function copyText(text, button) {
   try {
     await navigator.clipboard.writeText(text);
@@ -392,6 +439,7 @@ function showCheckOverlay(result) {
 
     appendSuggestionGroup(body, "오류/수정 제안", result.spelling);
     appendSuggestionGroup(body, "띄어쓰기 제안", result.spacing);
+    appendDictionaryGroup(body, result.dictionaryLookups);
     appendWordGroup(body, "미확인 단어", result.unconfirmedWords, async (word) => {
       const response = await chrome.runtime.sendMessage({
         type: "ADD_EXCEPTION_WORD",

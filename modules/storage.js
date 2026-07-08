@@ -2,11 +2,13 @@ const DEFAULTS = {
   exceptionWords: [],
   customRules: [],
   apiSettings: {
-    koreanDictionaryApiKey: ""
+    krdictApiKey: "",
+    opendictApiKey: ""
   },
   checkerOptions: {
     includeUnconfirmedWords: true,
-    enableDictionaryApi: false
+    enableDictionaryApi: false,
+    dictionaryLookupLimit: 10
   }
 };
 
@@ -15,7 +17,46 @@ function getStorageArea() {
 }
 
 export async function getSettings() {
-  return getStorageArea().get(DEFAULTS);
+  const settings = await getStorageArea().get(DEFAULTS);
+  return {
+    ...settings,
+    apiSettings: {
+      ...DEFAULTS.apiSettings,
+      ...(settings.apiSettings ?? {})
+    },
+    checkerOptions: {
+      ...DEFAULTS.checkerOptions,
+      ...(settings.checkerOptions ?? {})
+    }
+  };
+}
+
+export async function saveApiSettings(apiSettings) {
+  const settings = await getSettings();
+  const nextApiSettings = {
+    ...settings.apiSettings,
+    ...apiSettings
+  };
+  await getStorageArea().set({ apiSettings: nextApiSettings });
+
+  return {
+    ...settings,
+    apiSettings: nextApiSettings
+  };
+}
+
+export async function saveCheckerOptions(checkerOptions) {
+  const settings = await getSettings();
+  const nextCheckerOptions = {
+    ...settings.checkerOptions,
+    ...checkerOptions
+  };
+  await getStorageArea().set({ checkerOptions: nextCheckerOptions });
+
+  return {
+    ...settings,
+    checkerOptions: nextCheckerOptions
+  };
 }
 
 export async function addExceptionWord(word) {

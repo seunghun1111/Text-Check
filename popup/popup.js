@@ -1,5 +1,9 @@
-import { checkText } from "../modules/ruleChecker.js";
-import { addExceptionWord, getSettings } from "../modules/storage.js";
+import {
+  addExceptionWord,
+  getSettings,
+  saveApiSettings,
+  saveCheckerOptions
+} from "../modules/storage.js";
 
 const sourceText = document.querySelector("#sourceText");
 const selectionStatus = document.querySelector("#selectionStatus");
@@ -9,6 +13,11 @@ const resultSection = document.querySelector("#resultSection");
 const exceptionInput = document.querySelector("#exceptionInput");
 const addExceptionButton = document.querySelector("#addExceptionButton");
 const exceptionList = document.querySelector("#exceptionList");
+const enableDictionaryApi = document.querySelector("#enableDictionaryApi");
+const krdictApiKey = document.querySelector("#krdictApiKey");
+const opendictApiKey = document.querySelector("#opendictApiKey");
+const saveApiSettingsButton = document.querySelector("#saveApiSettingsButton");
+const apiSettingsStatus = document.querySelector("#apiSettingsStatus");
 
 let settings = await getSettings();
 let lastResult = null;
@@ -102,10 +111,47 @@ function renderWordGroup(title, words) {
   resultSection.append(group);
 }
 
+function renderDictionaryLookups(lookups = []) {
+  const foundLookups = lookups.filter((item) => item.status === "found");
+  if (foundLookups.length === 0) {
+    return;
+  }
+
+  const group = createElement("div", "result-group");
+  group.append(createElement("h2", "result-title", "사전 확인"));
+
+  foundLookups.forEach((lookup) => {
+    const entry = lookup.entries[0] ?? {};
+    const item = createElement("div", "dictionary-entry");
+    item.append(createElement("strong", "", lookup.word));
+    item.append(
+      createElement(
+        "div",
+        "dictionary-meta",
+        `${entry.source ?? lookup.source} ${entry.partOfSpeech ? `· ${entry.partOfSpeech}` : ""}`
+      )
+    );
+    if (entry.definition) {
+      item.append(createElement("div", "", entry.definition));
+    }
+    group.append(item);
+  });
+
+  resultSection.append(group);
+}
+
 function renderResults(result) {
   clearElement(resultSection);
 
-  if (!result.hasSuggestions && result.unconfirmedWords.length === 0) {
+  const hasDictionaryResults = result.dictionaryLookups?.some(
+    (item) => item.status === "found"
+  );
+
+  if (
+    !result.hasSuggestions &&
+    result.unconfirmedWords.length === 0 &&
+    !hasDictionaryResults
+  ) {
     resultSection.append(createElement("p", "empty", "수정할 내용이 없습니다."));
     copyButton.disabled = true;
     return;
@@ -113,6 +159,7 @@ function renderResults(result) {
 
   renderSuggestionGroup("오류/수정 제안", result.spelling);
   renderSuggestionGroup("띄어쓰기 제안", result.spacing);
+  renderDictionaryLookups(result.dictionaryLookups);
   renderWordGroup("미확인 단어", result.unconfirmedWords);
 
   if (!result.hasSuggestions) {
@@ -122,6 +169,12 @@ function renderResults(result) {
   }
 
   copyButton.disabled = !result.hasSuggestions;
+}
+
+function renderApiSettings() {
+  enableDictionaryApi.checked = Boolean(settings.checkerOptions.enableDictionaryApi);
+  krdictApiKey.value = settings.apiSettings.krdictApiKey ?? "";
+  opendictApiKey.value = settings.apiSettings.opendictApiKey ?? "";
 }
 
 function renderExceptionWords() {
@@ -137,7 +190,7 @@ function renderExceptionWords() {
   });
 }
 
-function runCheck() {
+async function runCheck() {
   const text = sourceText.value.trim();
   if (!text) {
     lastResult = null;
@@ -147,10 +200,24 @@ function runCheck() {
     return;
   }
 
-  lastResult = checkText(text, {
-    exceptionWords: settings.exceptionWords,
-    includeUnconfirmedWords: settings.checkerOptions.includeUnconfirmedWords
+  checkButton.disabled = true;
+  checkButton.textContent = "검사 중";
+
+  const response = await chrome.runtime.sendMessage({
+    type: "CHECK_TEXT",
+    text
   });
+
+  checkButton.disabled = false;
+  checkButton.textContent = "검사하기";
+
+  if (!response?.ok) {
+    clearElement(resultSection);
+    resultSection.append(createElement("p", "empty", "검사 중 오류가 발생했습니다."));
+    return;
+  }
+
+  lastResult = response.result;
   renderResults(lastResult);
 }
 
@@ -178,9 +245,27 @@ async function handleAddExceptionWord() {
   runCheck();
 }
 
+async function handleSaveApiSettings() {
+  const apiSettings = {
+    krdictApiKey: krdictApiKey.value.trim(),
+    opendictApiKey: opendictApiKey.value.trim()
+  };
+  const checkerOptions = {
+    enableDictionaryApi: enableDictionaryApi.checked
+  };
+
+  settings = await saveApiSettings(apiSettings);
+  settings = await saveCheckerOptions(checkerOptions);
+  apiSettingsStatus.textContent = "API 설정을 저장했습니다.";
+  window.setTimeout(() => {
+    apiSettingsStatus.textContent = "키는 Chrome storage에만 저장됩니다.";
+  }, 1400);
+}
+
 checkButton.addEventListener("click", runCheck);
 copyButton.addEventListener("click", copyCorrectedText);
 addExceptionButton.addEventListener("click", handleAddExceptionWord);
+saveApiSettingsButton.addEventListener("click", handleSaveApiSettings);
 exceptionInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     handleAddExceptionWord();
@@ -188,4 +273,5 @@ exceptionInput.addEventListener("keydown", (event) => {
 });
 
 renderExceptionWords();
+renderApiSettings();
 await loadSelectedText();

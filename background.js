@@ -1,5 +1,14 @@
 import { checkText } from "./modules/ruleChecker.js";
-import { addExceptionWord, getSettings } from "./modules/storage.js";
+import {
+  addExceptionWord,
+  getSettings,
+  saveApiSettings,
+  saveCheckerOptions
+} from "./modules/storage.js";
+import {
+  checkWordsWithDictionary,
+  extractKoreanWords
+} from "./modules/dictionaryApi.js";
 
 const CHECK_SELECTION_MENU_ID = "check-selected-korean-text";
 
@@ -16,10 +25,29 @@ async function getSelectedTextFromTab(tabId) {
 
 async function runCheck(text) {
   const settings = await getSettings();
-  return checkText(text, {
+  const result = checkText(text, {
     exceptionWords: settings.exceptionWords,
     includeUnconfirmedWords: settings.checkerOptions.includeUnconfirmedWords
   });
+  const words = extractKoreanWords(
+    text,
+    settings.checkerOptions.dictionaryLookupLimit
+  ).filter((word) => !settings.exceptionWords.includes(word));
+  const dictionaryLookups = await checkWordsWithDictionary(words, settings);
+  const dictionaryUnconfirmedWords = settings.checkerOptions.enableDictionaryApi
+    ? dictionaryLookups
+        .filter((item) => item.status === "not_found")
+        .map((item) => item.word)
+    : [];
+
+  return {
+    ...result,
+    unconfirmedWords: [
+      ...new Set([...result.unconfirmedWords, ...dictionaryUnconfirmedWords])
+    ],
+    dictionaryLookups,
+    dictionaryEnabled: settings.checkerOptions.enableDictionaryApi
+  };
 }
 
 async function showCheckLayer(tabId, text) {
@@ -44,17 +72,25 @@ async function showCheckLayer(tabId, text) {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.sync.get(["exceptionWords", "checkerOptions"], (items) => {
+  chrome.storage.sync.get(["exceptionWords", "checkerOptions", "apiSettings"], (items) => {
     const defaults = {};
 
     if (!Array.isArray(items.exceptionWords)) {
       defaults.exceptionWords = [];
     }
 
+    if (!items.apiSettings) {
+      defaults.apiSettings = {
+        krdictApiKey: "",
+        opendictApiKey: ""
+      };
+    }
+
     if (!items.checkerOptions) {
       defaults.checkerOptions = {
         includeUnconfirmedWords: true,
-        enableDictionaryApi: false
+        enableDictionaryApi: false,
+        dictionaryLookupLimit: 10
       };
     }
 
@@ -90,6 +126,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.type === "ADD_EXCEPTION_WORD") {
     addExceptionWord(message.word)
+      .then((settings) => sendResponse({ ok: true, settings }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (message?.type === "SAVE_API_SETTINGS") {
+    saveApiSettings(message.apiSettings)
+      .then((settings) => sendResponse({ ok: true, settings }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (message?.type === "SAVE_CHECKER_OPTIONS") {
+    saveCheckerOptions(message.checkerOptions)
       .then((settings) => sendResponse({ ok: true, settings }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;

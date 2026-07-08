@@ -36,6 +36,24 @@
         </div>
         <div id="exceptionList" class="chips" aria-label="등록된 예외 단어"></div>
       </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <h2>사전 API 설정</h2>
+          <label class="switch">
+            <input id="enableDictionaryApi" type="checkbox">
+            <span>조회 사용</span>
+          </label>
+        </div>
+        <label class="label" for="krdictApiKey">한국어기초사전 API 키</label>
+        <input id="krdictApiKey" type="password" autocomplete="off" placeholder="발급받은 키를 입력하세요">
+        <label class="label stacked" for="opendictApiKey">우리말샘 API 키</label>
+        <input id="opendictApiKey" type="password" autocomplete="off" placeholder="발급받은 키를 입력하세요">
+        <div class="actions">
+          <button id="saveApiSettingsButton" type="button">API 설정 저장</button>
+        </div>
+        <p id="apiSettingsStatus" class="status">키는 Chrome storage에만 저장됩니다.</p>
+      </section>
     </main>
 
     <script type="module" src="popup.js"></script>
