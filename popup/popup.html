@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Korean Text Check</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="app">
+      <header class="header">
+        <div>
+          <h1>한국어 문장 검사</h1>
+          <p id="selectionStatus">선택한 텍스트를 불러오는 중입니다.</p>
+        </div>
+      </header>
+
+      <section class="section">
+        <label class="label" for="sourceText">검사할 문장</label>
+        <textarea id="sourceText" rows="6" placeholder="웹페이지에서 문장을 선택하거나 여기에 직접 입력하세요."></textarea>
+        <div class="actions">
+          <button id="checkButton" class="primary" type="button">검사하기</button>
+          <button id="copyButton" type="button" disabled>수정 결과 복사</button>
+        </div>
+      </section>
+
+      <section id="resultSection" class="section results" aria-live="polite">
+        <p class="empty">검사 결과가 여기에 표시됩니다.</p>
+      </section>
+
+      <section class="section">
+        <label class="label" for="exceptionInput">사용자 예외 단어</label>
+        <div class="inline-form">
+          <input id="exceptionInput" type="text" placeholder="예: PRMS, traceId, ADS-221">
+          <button id="addExceptionButton" type="button">등록</button>
+        </div>
+        <div id="exceptionList" class="chips" aria-label="등록된 예외 단어"></div>
+      </section>
+    </main>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

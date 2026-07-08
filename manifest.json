@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Korean Text Check",
+  "description": "Selected Korean text checker with local spelling and spacing rules.",
+  "version": "0.1.0",
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Korean Text Check"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["contentScript.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "activeTab",
+    "clipboardWrite",
+    "contextMenus",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": ["<all_urls>"]
+}
