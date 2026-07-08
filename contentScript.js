@@ -195,6 +195,7 @@ function createStyle() {
     .ktc-chip {
       display: inline-flex;
       align-items: center;
+      gap: 4px;
       min-height: 28px;
       border: 0;
       border-radius: 999px;
@@ -203,6 +204,32 @@ function createStyle() {
       color: var(--ktc-info);
       font: inherit;
       font-size: 12px;
+    }
+
+    .ktc-removable-chip {
+      padding-right: 4px;
+    }
+
+    .ktc-chip-remove {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      min-width: 20px;
+      height: 20px;
+      min-height: 20px;
+      border: 0;
+      border-radius: 50%;
+      padding: 0;
+      background: transparent;
+      color: var(--ktc-info);
+      cursor: pointer;
+      font: inherit;
+      line-height: 1;
+    }
+
+    .ktc-chip-remove:hover {
+      background: rgba(37, 99, 235, 0.12);
     }
 
     .ktc-dictionary-entry {
@@ -336,6 +363,35 @@ function appendWordGroup(parent, title, words, onAddException) {
     button.type = "button";
     button.title = `${word}를 사용자 예외 단어로 등록`;
     button.addEventListener("click", () => onAddException(word));
+  });
+
+  section.append(chips);
+  parent.append(section);
+}
+
+function appendExceptionGroup(parent, words, onRemoveException) {
+  if (!words.length) {
+    return;
+  }
+
+  const section = document.createElement("section");
+  section.className = "ktc-section";
+  appendTextElement(section, "h3", "ktc-section-title", "사용자 예외 단어");
+
+  const chips = document.createElement("div");
+  chips.className = "ktc-chips";
+  words.forEach((word) => {
+    const chip = document.createElement("span");
+    chip.className = "ktc-chip ktc-removable-chip";
+    appendTextElement(chip, "span", "", word);
+
+    const removeButton = appendTextElement(chip, "button", "ktc-chip-remove", "×");
+    removeButton.type = "button";
+    removeButton.title = `${word} 예외 단어 삭제`;
+    removeButton.setAttribute("aria-label", `${word} 예외 단어 삭제`);
+    removeButton.addEventListener("click", () => onRemoveException(word));
+
+    chips.append(chip);
   });
 
   section.append(chips);
@@ -495,6 +551,22 @@ function showCheckOverlay(result) {
     appendWordGroup(body, "미확인 단어", result.unconfirmedWords, async (word) => {
       const response = await chrome.runtime.sendMessage({
         type: "ADD_EXCEPTION_WORD",
+        word
+      });
+
+      if (response?.ok) {
+        const rerun = await chrome.runtime.sendMessage({
+          type: "CHECK_TEXT",
+          text: result.originalText
+        });
+        if (rerun?.ok) {
+          showCheckOverlay(rerun.result);
+        }
+      }
+    });
+    appendExceptionGroup(body, result.exceptionWords, async (word) => {
+      const response = await chrome.runtime.sendMessage({
+        type: "REMOVE_EXCEPTION_WORD",
         word
       });
 

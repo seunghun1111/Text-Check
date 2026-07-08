@@ -214,12 +214,37 @@ button:disabled {
 .chip {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   min-height: 28px;
   border-radius: 999px;
   padding: 0 9px;
   background: var(--info-bg);
   color: var(--info);
   font-size: 12px;
+}
+
+.removable-chip {
+  padding-right: 4px;
+}
+
+.chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  min-height: 20px;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  color: var(--info);
+  line-height: 1;
+}
+
+.chip-remove:hover {
+  background: rgba(37, 99, 235, 0.12);
 }
 
 .dictionary-entry {

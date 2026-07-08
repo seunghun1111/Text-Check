@@ -2,6 +2,7 @@ import { checkText } from "./modules/ruleChecker.js";
 import {
   addExceptionWord,
   getSettings,
+  removeExceptionWord,
   saveApiSettings,
   saveCheckerOptions
 } from "./modules/storage.js";
@@ -126,6 +127,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.type === "ADD_EXCEPTION_WORD") {
     addExceptionWord(message.word)
+      .then((settings) => sendResponse({ ok: true, settings }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (message?.type === "REMOVE_EXCEPTION_WORD") {
+    removeExceptionWord(message.word)
       .then((settings) => sendResponse({ ok: true, settings }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;

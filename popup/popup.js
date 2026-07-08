@@ -1,6 +1,7 @@
 import {
   addExceptionWord,
   getSettings,
+  removeExceptionWord,
   saveApiSettings,
   saveCheckerOptions
 } from "../modules/storage.js";
@@ -186,7 +187,17 @@ function renderExceptionWords() {
   }
 
   settings.exceptionWords.forEach((word) => {
-    exceptionList.append(createElement("span", "chip", word));
+    const chip = createElement("span", "chip removable-chip");
+    chip.append(createElement("span", "", word));
+
+    const removeButton = createElement("button", "chip-remove", "×");
+    removeButton.type = "button";
+    removeButton.title = `${word} 예외 단어 삭제`;
+    removeButton.setAttribute("aria-label", `${word} 예외 단어 삭제`);
+    removeButton.addEventListener("click", () => handleRemoveExceptionWord(word));
+
+    chip.append(removeButton);
+    exceptionList.append(chip);
   });
 }
 
@@ -241,6 +252,12 @@ async function handleAddExceptionWord() {
 
   settings = await addExceptionWord(word);
   exceptionInput.value = "";
+  renderExceptionWords();
+  runCheck();
+}
+
+async function handleRemoveExceptionWord(word) {
+  settings = await removeExceptionWord(word);
   renderExceptionWords();
   runCheck();
 }
