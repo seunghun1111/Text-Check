@@ -39,6 +39,22 @@
 
       <section class="section">
         <div class="section-heading">
+          <h2>사용자 교정 규칙</h2>
+        </div>
+        <div class="rule-form">
+          <label class="label" for="customWrongInput">바꿀 표현</label>
+          <input id="customWrongInput" type="text" placeholder="예: 안넝하세요">
+          <label class="label stacked" for="customSuggestionInput">수정 표현</label>
+          <input id="customSuggestionInput" type="text" placeholder="예: 안녕하세요">
+          <div class="actions">
+            <button id="addCustomRuleButton" type="button">교정 규칙 등록</button>
+          </div>
+        </div>
+        <div id="customRuleList" class="rule-list" aria-label="등록된 사용자 교정 규칙"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
           <h2>사전 API 설정</h2>
           <label class="switch">
             <input id="enableDictionaryApi" type="checkbox">

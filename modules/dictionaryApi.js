@@ -1,6 +1,9 @@
 const KRDICT_SEARCH_URL = "https://krdict.korean.go.kr/api/search";
 const OPENDICT_SEARCH_URL = "https://opendict.korean.go.kr/api/search";
 const KOREAN_WORD_PATTERN = /[가-힣]{2,}/g;
+const CACHE_TTL_MS = 1000 * 60 * 60 * 24;
+
+const dictionaryCache = new Map();
 
 function toArray(value) {
   if (!value) {
@@ -176,6 +179,19 @@ export function extractKoreanWords(text, limit = 10) {
 
 export async function lookupDictionary(word, settings = {}) {
   const apiSettings = settings.apiSettings ?? {};
+  const cacheKey = [
+    word,
+    Boolean(apiSettings.krdictApiKey),
+    Boolean(apiSettings.opendictApiKey)
+  ].join(":");
+  const cached = dictionaryCache.get(cacheKey);
+
+  if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
+    return {
+      ...cached.result,
+      cached: true
+    };
+  }
 
   try {
     const krdictResult = await lookupKoreanBasicDictionary(
@@ -183,12 +199,14 @@ export async function lookupDictionary(word, settings = {}) {
       apiSettings.krdictApiKey
     );
     if (krdictResult.status === "found") {
-      return {
+      const result = {
         word,
         status: "found",
         source: krdictResult.source,
         entries: krdictResult.entries
       };
+      dictionaryCache.set(cacheKey, { result, cachedAt: Date.now() });
+      return result;
     }
 
     const opendictResult = await lookupOpenDictionary(
@@ -196,30 +214,36 @@ export async function lookupDictionary(word, settings = {}) {
       apiSettings.opendictApiKey
     );
     if (opendictResult.status === "found") {
-      return {
+      const result = {
         word,
         status: "found",
         source: opendictResult.source,
         entries: opendictResult.entries
       };
+      dictionaryCache.set(cacheKey, { result, cachedAt: Date.now() });
+      return result;
     }
 
     if (
       krdictResult.status === "skipped" &&
       opendictResult.status === "skipped"
     ) {
-      return {
+      const result = {
         word,
         status: "skipped",
         reason: "사전 API 키가 설정되지 않았습니다."
       };
+      dictionaryCache.set(cacheKey, { result, cachedAt: Date.now() });
+      return result;
     }
 
-    return {
+    const result = {
       word,
       status: "not_found",
       entries: []
     };
+    dictionaryCache.set(cacheKey, { result, cachedAt: Date.now() });
+    return result;
   } catch (error) {
     return {
       word,

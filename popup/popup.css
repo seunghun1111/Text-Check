@@ -263,6 +263,36 @@ button:disabled {
   font-size: 12px;
 }
 
+.rule-list {
+  margin-top: 10px;
+}
+
+.rule-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--info-bg);
+  color: var(--text);
+}
+
+.rule-item + .rule-item {
+  margin-top: 6px;
+}
+
+.rule-text {
+  min-width: 0;
+  word-break: break-word;
+}
+
+.rule-remove {
+  min-width: 32px;
+  width: 32px;
+  padding: 0;
+}
+
 .status {
   margin-top: 8px;
   color: var(--muted);

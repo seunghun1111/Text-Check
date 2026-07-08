@@ -1,7 +1,9 @@
 import {
   addExceptionWord,
+  addCustomRule,
   getSettings,
   removeExceptionWord,
+  removeCustomRule,
   saveApiSettings,
   saveCheckerOptions
 } from "../modules/storage.js";
@@ -14,6 +16,10 @@ const resultSection = document.querySelector("#resultSection");
 const exceptionInput = document.querySelector("#exceptionInput");
 const addExceptionButton = document.querySelector("#addExceptionButton");
 const exceptionList = document.querySelector("#exceptionList");
+const customWrongInput = document.querySelector("#customWrongInput");
+const customSuggestionInput = document.querySelector("#customSuggestionInput");
+const addCustomRuleButton = document.querySelector("#addCustomRuleButton");
+const customRuleList = document.querySelector("#customRuleList");
 const enableDictionaryApi = document.querySelector("#enableDictionaryApi");
 const krdictApiKey = document.querySelector("#krdictApiKey");
 const opendictApiKey = document.querySelector("#opendictApiKey");
@@ -160,6 +166,7 @@ function renderResults(result) {
 
   renderSuggestionGroup("오류/수정 제안", result.spelling);
   renderSuggestionGroup("띄어쓰기 제안", result.spacing);
+  renderSuggestionGroup("표준어/외래어 표기 제안", result.standardNotation);
   renderDictionaryLookups(result.dictionaryLookups);
   renderWordGroup("미확인 단어", result.unconfirmedWords);
 
@@ -198,6 +205,32 @@ function renderExceptionWords() {
 
     chip.append(removeButton);
     exceptionList.append(chip);
+  });
+}
+
+function renderCustomRules() {
+  clearElement(customRuleList);
+
+  if (!settings.customRules.length) {
+    customRuleList.append(createElement("p", "status", "등록된 사용자 교정 규칙이 없습니다."));
+    return;
+  }
+
+  settings.customRules.forEach((rule) => {
+    const item = createElement("div", "rule-item");
+    const text = createElement("div", "rule-text");
+    text.append(createElement("strong", "", rule.wrong));
+    text.append(createElement("span", "arrow", "→"));
+    text.append(createElement("strong", "", rule.suggestion));
+
+    const removeButton = createElement("button", "rule-remove", "×");
+    removeButton.type = "button";
+    removeButton.title = `${rule.wrong} 교정 규칙 삭제`;
+    removeButton.setAttribute("aria-label", `${rule.wrong} 교정 규칙 삭제`);
+    removeButton.addEventListener("click", () => handleRemoveCustomRule(rule.id));
+
+    item.append(text, removeButton);
+    customRuleList.append(item);
   });
 }
 
@@ -262,6 +295,29 @@ async function handleRemoveExceptionWord(word) {
   runCheck();
 }
 
+async function handleAddCustomRule() {
+  const wrong = customWrongInput.value.trim();
+  const suggestion = customSuggestionInput.value.trim();
+  if (!wrong || !suggestion) {
+    return;
+  }
+
+  settings = await addCustomRule({
+    wrong,
+    suggestion
+  });
+  customWrongInput.value = "";
+  customSuggestionInput.value = "";
+  renderCustomRules();
+  runCheck();
+}
+
+async function handleRemoveCustomRule(ruleId) {
+  settings = await removeCustomRule(ruleId);
+  renderCustomRules();
+  runCheck();
+}
+
 async function handleSaveApiSettings() {
   const apiSettings = {
     krdictApiKey: krdictApiKey.value.trim(),
@@ -282,13 +338,20 @@ async function handleSaveApiSettings() {
 checkButton.addEventListener("click", runCheck);
 copyButton.addEventListener("click", copyCorrectedText);
 addExceptionButton.addEventListener("click", handleAddExceptionWord);
+addCustomRuleButton.addEventListener("click", handleAddCustomRule);
 saveApiSettingsButton.addEventListener("click", handleSaveApiSettings);
 exceptionInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     handleAddExceptionWord();
   }
 });
+customSuggestionInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    handleAddCustomRule();
+  }
+});
 
 renderExceptionWords();
+renderCustomRules();
 renderApiSettings();
 await loadSelectedText();

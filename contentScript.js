@@ -301,6 +301,35 @@ function createStyle() {
       color: var(--ktc-muted);
     }
 
+    .ktc-loading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--ktc-muted);
+    }
+
+    .ktc-spinner {
+      width: 18px;
+      min-width: 18px;
+      height: 18px;
+      border: 2px solid #d9dee7;
+      border-top-color: var(--ktc-primary);
+      border-radius: 50%;
+      animation: ktc-spin 0.8s linear infinite;
+    }
+
+    .ktc-note {
+      margin: 8px 0 0;
+      color: var(--ktc-muted);
+      font-size: 12px;
+    }
+
+    @keyframes ktc-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     @media (max-width: 520px) {
       .ktc-layer {
         top: 12px;
@@ -453,6 +482,55 @@ function closeOverlay() {
   overlayHost = null;
 }
 
+function createOverlayShell(subtitle) {
+  closeOverlay();
+
+  overlayHost = document.createElement("korean-text-check-layer");
+  const shadow = overlayHost.attachShadow({ mode: "open" });
+  shadow.append(createStyle());
+
+  const layer = document.createElement("aside");
+  layer.className = "ktc-layer";
+  layer.setAttribute("role", "dialog");
+  layer.setAttribute("aria-label", "한국어 맞춤법 검사 결과");
+
+  const header = document.createElement("header");
+  header.className = "ktc-header";
+  const titleBox = document.createElement("div");
+  appendTextElement(titleBox, "h2", "ktc-title", "한국어 맞춤법 검사");
+  appendTextElement(titleBox, "p", "ktc-subtitle", subtitle);
+
+  const closeButton = appendTextElement(header, "button", "ktc-close", "×");
+  closeButton.type = "button";
+  closeButton.title = "닫기";
+  closeButton.addEventListener("click", closeOverlay);
+  header.prepend(titleBox);
+
+  const body = document.createElement("div");
+  body.className = "ktc-body";
+
+  layer.append(header, body);
+  shadow.append(layer);
+  document.documentElement.append(overlayHost);
+  positionLayerNearContextMenu(layer);
+
+  return { body, layer };
+}
+
+function getOverlayBody() {
+  return overlayHost?.shadowRoot?.querySelector(".ktc-body") ?? null;
+}
+
+function getOverlaySubtitle() {
+  return overlayHost?.shadowRoot?.querySelector(".ktc-subtitle") ?? null;
+}
+
+function clearElement(element) {
+  while (element.firstChild) {
+    element.firstChild.remove();
+  }
+}
+
 function positionLayerNearContextMenu(layer) {
   const position =
     lastContextMenuPosition ||
@@ -482,38 +560,8 @@ function positionLayerNearContextMenu(layer) {
   layer.style.top = `${top}px`;
 }
 
-function showCheckOverlay(result) {
-  closeOverlay();
-
-  overlayHost = document.createElement("korean-text-check-layer");
-  const shadow = overlayHost.attachShadow({ mode: "open" });
-  shadow.append(createStyle());
-
-  const layer = document.createElement("aside");
-  layer.className = "ktc-layer";
-  layer.setAttribute("role", "dialog");
-  layer.setAttribute("aria-label", "한국어 맞춤법 검사 결과");
-
-  const header = document.createElement("header");
-  header.className = "ktc-header";
-  const titleBox = document.createElement("div");
-  appendTextElement(titleBox, "h2", "ktc-title", "한국어 맞춤법 검사");
-  appendTextElement(
-    titleBox,
-    "p",
-    "ktc-subtitle",
-    result.originalText ? "선택한 텍스트 검사 결과입니다." : "선택한 텍스트가 없습니다."
-  );
-
-  const closeButton = appendTextElement(header, "button", "ktc-close", "×");
-  closeButton.type = "button";
-  closeButton.title = "닫기";
-  closeButton.addEventListener("click", closeOverlay);
-  header.prepend(titleBox);
-
-  const body = document.createElement("div");
-  body.className = "ktc-body";
-
+function renderCheckResult(result, body) {
+  clearElement(body);
   if (!result.originalText) {
     appendTextElement(body, "p", "ktc-empty", "검사할 텍스트를 선택한 뒤 다시 실행하세요.");
   } else {
@@ -547,7 +595,29 @@ function showCheckOverlay(result) {
 
     appendSuggestionGroup(body, "오류/수정 제안", result.spelling);
     appendSuggestionGroup(body, "띄어쓰기 제안", result.spacing);
+    appendSuggestionGroup(body, "표준어/외래어 표기 제안", result.standardNotation);
     appendDictionaryGroup(body, result.dictionaryLookups);
+    if (result.dictionaryPending) {
+      const pendingSection = document.createElement("section");
+      pendingSection.className = "ktc-section";
+      const loading = document.createElement("div");
+      loading.className = "ktc-loading";
+      const spinner = document.createElement("span");
+      spinner.className = "ktc-spinner";
+      spinner.setAttribute("aria-hidden", "true");
+      appendTextElement(loading, "span", "", "사전 등재 여부를 확인하는 중입니다.");
+      loading.prepend(spinner);
+      pendingSection.append(loading);
+      if (result.dictionaryLimit) {
+        appendTextElement(
+          pendingSection,
+          "p",
+          "ktc-note",
+          `사전 조회는 최대 ${result.dictionaryLimit}개 단어까지만 확인합니다.`
+        );
+      }
+      body.append(pendingSection);
+    }
     appendWordGroup(body, "미확인 단어", result.unconfirmedWords, async (word) => {
       const response = await chrome.runtime.sendMessage({
         type: "ADD_EXCEPTION_WORD",
@@ -581,11 +651,50 @@ function showCheckOverlay(result) {
       }
     });
   }
+}
 
-  layer.append(header, body);
-  shadow.append(layer);
-  document.documentElement.append(overlayHost);
-  positionLayerNearContextMenu(layer);
+function showLoadingOverlay(originalText = "") {
+  const subtitle = originalText
+    ? "선택한 텍스트를 확인하고 있습니다."
+    : "선택한 텍스트를 확인하는 중입니다.";
+  const { body } = createOverlayShell(subtitle);
+  const loading = document.createElement("div");
+  loading.className = "ktc-loading";
+  const spinner = document.createElement("span");
+  spinner.className = "ktc-spinner";
+  spinner.setAttribute("aria-hidden", "true");
+  appendTextElement(loading, "span", "", "검사 중입니다.");
+  loading.prepend(spinner);
+  body.append(loading);
+
+  if (originalText.length > 800) {
+    appendTextElement(
+      body,
+      "p",
+      "ktc-note",
+      "선택한 텍스트가 길어 검사 결과가 나눠서 표시될 수 있습니다."
+    );
+  }
+}
+
+function showCheckOverlay(result) {
+  let body = getOverlayBody();
+  if (!body) {
+    body = createOverlayShell(
+      result.originalText ? "선택한 텍스트 검사 결과입니다." : "선택한 텍스트가 없습니다."
+    ).body;
+  }
+
+  const subtitle = getOverlaySubtitle();
+  if (subtitle) {
+    subtitle.textContent = result.dictionaryPending
+      ? "로컬 검사 결과입니다. 사전 확인을 이어서 진행합니다."
+      : result.originalText
+        ? "선택한 텍스트 검사 결과입니다."
+        : "선택한 텍스트가 없습니다.";
+  }
+
+  renderCheckResult(result, body);
 }
 
 document.addEventListener("selectionchange", rememberSelectedText);
@@ -608,6 +717,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message?.type === "SHOW_CHECK_LAYER") {
     showCheckOverlay(message.result);
+    sendResponse({ ok: true });
+
+    return false;
+  }
+
+  if (message?.type === "SHOW_CHECK_LAYER_LOADING") {
+    showLoadingOverlay(message.originalText ?? "");
     sendResponse({ ok: true });
 
     return false;

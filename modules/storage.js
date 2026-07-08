@@ -123,3 +123,48 @@ export async function removeExceptionWord(word) {
     exceptionWords: nextWords
   };
 }
+
+function normalizeCustomRule(rule) {
+  const wrong = String(rule?.wrong ?? "").trim();
+  const suggestion = String(rule?.suggestion ?? "").trim();
+
+  if (!wrong || !suggestion) {
+    throw new Error("사용자 교정 규칙의 원문과 수정안을 입력해야 합니다.");
+  }
+
+  return {
+    id: rule.id || `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    category: rule.category || "spelling",
+    matchType: "literal",
+    wrong,
+    suggestion,
+    description: rule.description || "사용자 등록 교정 규칙",
+    custom: true
+  };
+}
+
+export async function addCustomRule(rule) {
+  const settings = await getSettings();
+  const normalizedRule = normalizeCustomRule(rule);
+  const nextRules = [
+    ...settings.customRules.filter((item) => item.wrong !== normalizedRule.wrong),
+    normalizedRule
+  ];
+  await getStorageArea().set({ customRules: nextRules });
+
+  return {
+    ...settings,
+    customRules: nextRules
+  };
+}
+
+export async function removeCustomRule(ruleId) {
+  const settings = await getSettings();
+  const nextRules = settings.customRules.filter((item) => item.id !== ruleId);
+  await getStorageArea().set({ customRules: nextRules });
+
+  return {
+    ...settings,
+    customRules: nextRules
+  };
+}

@@ -1,8 +1,10 @@
 import { checkText } from "./modules/ruleChecker.js";
 import {
   addExceptionWord,
+  addCustomRule,
   getSettings,
   removeExceptionWord,
+  removeCustomRule,
   saveApiSettings,
   saveCheckerOptions
 } from "./modules/storage.js";
@@ -24,12 +26,26 @@ async function getSelectedTextFromTab(tabId) {
   }
 }
 
-async function runCheck(text) {
+async function runLocalCheck(text) {
   const settings = await getSettings();
   const result = checkText(text, {
     exceptionWords: settings.exceptionWords,
+    customRules: settings.customRules,
     includeUnconfirmedWords: settings.checkerOptions.includeUnconfirmedWords
   });
+
+  return {
+    ...result,
+    dictionaryLookups: [],
+    dictionaryEnabled: settings.checkerOptions.enableDictionaryApi,
+    dictionaryPending: settings.checkerOptions.enableDictionaryApi,
+    dictionaryLimit: settings.checkerOptions.dictionaryLookupLimit
+  };
+}
+
+async function runDictionaryCheck(text, localResult = null) {
+  const settings = await getSettings();
+  const result = localResult ?? await runLocalCheck(text);
   const words = extractKoreanWords(
     text,
     settings.checkerOptions.dictionaryLookupLimit
@@ -47,15 +63,23 @@ async function runCheck(text) {
       ...new Set([...result.unconfirmedWords, ...dictionaryUnconfirmedWords])
     ],
     dictionaryLookups,
-    dictionaryEnabled: settings.checkerOptions.enableDictionaryApi
+    dictionaryEnabled: settings.checkerOptions.enableDictionaryApi,
+    dictionaryPending: false,
+    dictionaryLimit: settings.checkerOptions.dictionaryLookupLimit
   };
 }
 
 async function showCheckLayer(tabId, text) {
   const sourceText = String(text ?? "").trim();
-  const result = sourceText
-    ? await runCheck(sourceText)
-    : {
+  await chrome.tabs.sendMessage(tabId, {
+    type: "SHOW_CHECK_LAYER_LOADING",
+    originalText: sourceText
+  });
+
+  if (!sourceText) {
+    await chrome.tabs.sendMessage(tabId, {
+      type: "SHOW_CHECK_LAYER",
+      result: {
         originalText: "",
         correctedText: "",
         spelling: [],
@@ -63,21 +87,42 @@ async function showCheckLayer(tabId, text) {
         standardNotation: [],
         unconfirmedWords: [],
         exceptionWords: [],
+        dictionaryLookups: [],
+        dictionaryEnabled: false,
+        dictionaryPending: false,
         hasSuggestions: false
-      };
+      }
+    });
+    return;
+  }
 
+  const localResult = await runLocalCheck(sourceText);
   await chrome.tabs.sendMessage(tabId, {
     type: "SHOW_CHECK_LAYER",
-    result
+    result: localResult
+  });
+
+  if (!localResult.dictionaryEnabled) {
+    return;
+  }
+
+  const dictionaryResult = await runDictionaryCheck(sourceText, localResult);
+  await chrome.tabs.sendMessage(tabId, {
+    type: "SHOW_CHECK_LAYER",
+    result: dictionaryResult
   });
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.sync.get(["exceptionWords", "checkerOptions", "apiSettings"], (items) => {
+  chrome.storage.sync.get(["exceptionWords", "customRules", "checkerOptions", "apiSettings"], (items) => {
     const defaults = {};
 
     if (!Array.isArray(items.exceptionWords)) {
       defaults.exceptionWords = [];
+    }
+
+    if (!Array.isArray(items.customRules)) {
+      defaults.customRules = [];
     }
 
     if (!items.apiSettings) {
@@ -119,7 +164,14 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "CHECK_TEXT") {
-    runCheck(message.text)
+    runDictionaryCheck(message.text)
+      .then((result) => sendResponse({ ok: true, result }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (message?.type === "CHECK_TEXT_LOCAL") {
+    runLocalCheck(message.text)
       .then((result) => sendResponse({ ok: true, result }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;
@@ -134,6 +186,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.type === "REMOVE_EXCEPTION_WORD") {
     removeExceptionWord(message.word)
+      .then((settings) => sendResponse({ ok: true, settings }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (message?.type === "ADD_CUSTOM_RULE") {
+    addCustomRule(message.rule)
+      .then((settings) => sendResponse({ ok: true, settings }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (message?.type === "REMOVE_CUSTOM_RULE") {
+    removeCustomRule(message.ruleId)
       .then((settings) => sendResponse({ ok: true, settings }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;

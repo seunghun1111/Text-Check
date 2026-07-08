@@ -20,16 +20,29 @@ function collectMatches(text, rule, exceptionWords) {
     return [];
   }
 
-  const pattern = new RegExp(escapeRegExp(rule.wrong), "g");
+  const source = rule.matchType === "regex"
+    ? rule.pattern
+    : escapeRegExp(rule.wrong);
+  if (!source) {
+    return [];
+  }
+
+  const pattern = new RegExp(source, "g");
   const matches = [];
   let match;
 
   while ((match = pattern.exec(text)) !== null) {
+    const original = match[0];
+    if (!original) {
+      pattern.lastIndex += 1;
+      continue;
+    }
+
     matches.push({
       ...rule,
-      original: rule.wrong,
+      original,
       start: match.index,
-      end: match.index + rule.wrong.length
+      end: match.index + original.length
     });
   }
 
@@ -50,34 +63,57 @@ function collectUnconfirmedWords(text, exceptionWords) {
   return [...words];
 }
 
+function getNonOverlappingMatches(matches) {
+  const nonOverlappingMatches = [];
+  let lastEnd = -1;
+
+  [...matches]
+    .sort((a, b) => a.start - b.start || b.end - a.end)
+    .forEach((match) => {
+      if (match.start >= lastEnd) {
+        nonOverlappingMatches.push(match);
+        lastEnd = match.end;
+      }
+    });
+
+  return nonOverlappingMatches;
+}
+
 function applyRules(text, matches) {
-  return [...matches]
-    .sort((a, b) => a.start - b.start)
+  return matches
+    .sort((a, b) => b.start - a.start)
     .reduce((currentText, match) => {
-      return currentText.replaceAll(match.original, match.suggestion);
+      return `${currentText.slice(0, match.start)}${match.suggestion}${currentText.slice(match.end)}`;
     }, text);
 }
 
 export function checkText(text, options = {}) {
   const exceptionWords = normalizeExceptionWords(options.exceptionWords);
-  const rules = options.rules ?? DEFAULT_RULES;
+  const rules = [
+    ...(options.rules ?? DEFAULT_RULES),
+    ...(options.customRules ?? [])
+  ];
   const matches = rules.flatMap((rule) =>
     collectMatches(text, rule, exceptionWords)
   );
-  const spelling = matches.filter((item) => item.category === "spelling");
-  const spacing = matches.filter((item) => item.category === "spacing");
+  const nonOverlappingMatches = getNonOverlappingMatches(matches);
+  const spelling = nonOverlappingMatches.filter((item) => item.category === "spelling");
+  const spacing = nonOverlappingMatches.filter((item) => item.category === "spacing");
+  const standardNotation = nonOverlappingMatches.filter(
+    (item) => item.category === "standardNotation"
+  );
   const unconfirmedWords = options.includeUnconfirmedWords === false
     ? []
     : collectUnconfirmedWords(text, exceptionWords);
 
   return {
     originalText: text,
-    correctedText: applyRules(text, matches),
+    correctedText: applyRules(text, nonOverlappingMatches),
     spelling,
     spacing,
-    standardNotation: [],
+    standardNotation,
     unconfirmedWords,
     exceptionWords: [...exceptionWords],
-    hasSuggestions: matches.length > 0
+    hasSuggestions: nonOverlappingMatches.length > 0
   };
 }
